@@ -1,0 +1,1 @@
+{"options":{},"indexes":[{"v":1,"key":{"_id":1},"name":"_id_","ns":"mongoappconciinfo1.dectar_users"},{"v":1,"key":{"loc":"2dsphere"},"name":"loc_2dsphere","ns":"mongoappconciinfo1.dectar_users","2dsphereIndexVersion":3}]}

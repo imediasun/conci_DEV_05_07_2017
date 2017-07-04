@@ -1,0 +1,4 @@
+<?php 
+$config['payment_0'] = 'a:4:{s:12:"gateway_name";s:27:"Credit Card (Authorize.net)";s:14:"gateway_number";s:1:"1";s:8:"settings";a:3:{s:4:"mode";s:7:"sandbox";s:8:"Login_ID";s:8:"56yrJ6YH";s:15:"Transaction_Key";s:16:"2g83Sm7hE3k3zXsz";}s:6:"status";s:7:"Disable";}'; 
+$config['payment_1'] = 'a:4:{s:12:"gateway_name";s:6:"Paypal";s:14:"gateway_number";s:1:"2";s:8:"settings";a:2:{s:4:"mode";s:7:"sandbox";s:14:"merchant_email";s:26:"jayaprakash-jv@casperon.in";}s:6:"status";s:7:"Disable";}'; 
+$config['payment_2'] = 'a:4:{s:12:"gateway_name";s:6:"Stripe";s:14:"gateway_number";s:1:"3";s:8:"settings";a:3:{s:4:"mode";s:7:"sandbox";s:10:"secret_key";s:32:"sk_test_zgDC9LrC2QifO3As8E5g1BGK";s:15:"publishable_key";s:32:"pk_test_PEqGtKi2zh8EPuXqYnVQx4id";}s:6:"status";s:6:"Enable";}';  ?>
