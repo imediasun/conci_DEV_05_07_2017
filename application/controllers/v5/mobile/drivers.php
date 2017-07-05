@@ -3404,7 +3404,7 @@ class Drivers extends MY_Controller {
                         } else {
                             $returnArr['response'] = $this->format_string("No parametres to change", "no_params_to_change");
                         }
-                    } else {
+                    } else { 
                         $returnArr['response'] = $this->format_string("Invalid Driver", "invalid_driver");
                     }
                 } else {
@@ -3422,7 +3422,7 @@ class Drivers extends MY_Controller {
 	
 	   public function edit_provider_image()
     {
-
+	 
         $returnArr['status'] = '0';
         $returnArr['response'] = '';
         try {
@@ -3431,7 +3431,9 @@ class Drivers extends MY_Controller {
             $dir = 'images/drivers/';
             $file = $_FILES['image']['name'];
 			
-			if (move_uploaded_file($_FILES['image']['tmp_name'], $dir.$file)) {
+			$newFile = uniqid() . '_' . $file;
+			if (move_uploaded_file($_FILES['image']['tmp_name'], $dir . $newFile)) {
+		
             $image_status=1;
 
         } else {
@@ -3439,7 +3441,7 @@ class Drivers extends MY_Controller {
            $image_status=0;
         }
 		
-			
+		
            if (isset($driver_id) and isset($file)) {
                 if (!empty($driver_id)) {
 					
@@ -3448,7 +3450,7 @@ class Drivers extends MY_Controller {
                     if ($driver_details->num_rows() > 0) {
 						if($image_status==1){
                     
-                                if ($this->driver_model->update_details(DRIVERS,array('image'=>$file), array('_id' => new MongoId($driver_id)))) {
+                                if ($this->driver_model->update_details(DRIVERS,array('image'=>$newFile), array('_id' => new MongoId($driver_id)))) {
                                     $returnArr['status'] = '1';
                                 }
                                 $string ="image changed successfuly";

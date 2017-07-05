@@ -1409,6 +1409,7 @@ class User extends MY_Controller {
      *
      * */
     public function get_drivers_in_map() {
+		
         #print_r(json_encode($_POST)); die;
         $limit = 1000;
         $returnArr['status'] = '0';
@@ -1560,11 +1561,12 @@ class User extends MY_Controller {
 												$min_time_unit = $mins;
 											}
 											$fare['min_fare'] = array('amount' => (string) $location['result'][0]['fare'][$category]['min_fare'],
-												'text' => $first . ' ' . $location['result'][0]['fare'][$category]['min_km'] . ' ' . $distance_unit);
+												'text' =>'Max Person' /* $first . ' ' . $location['result'][0]['fare'][$category]['min_km'] . ' ' . $distance_unit */);
 											$fare['after_fare'] = array('amount' => (string) $location['result'][0]['fare'][$category]['per_km'] . '/' . $distance_unit,
-												'text' => $after . ' ' . $location['result'][0]['fare'][$category]['min_km'] . ' ' . $distance_unit);
+												'text' => 'Booking Fee'/* $after . ' ' . $location['result'][0]['fare'][$category]['min_km'] . ' ' . $distance_unit */);
 											$fare['other_fare'] = array('amount' => (string) $location['result'][0]['fare'][$category]['per_minute'] . '/' . $mins,
-												'text' => $ride_time_rate_post . ' ' . $location['result'][0]['fare'][$category]['min_time'] . ' ' . $min_time_unit);
+												 'text' => $ride_time_rate_post . ' ' . $location['result'][0]['fare'][$category]['min_time'] . ' ' . $min_time_unit  ,
+												);
 										}
 									}
 									$rateCard['farebreakup'] = $fare;
