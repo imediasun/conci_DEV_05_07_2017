@@ -1,8 +1,8 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
-
-#error_reporting(E_ALL);
-#ini_set('display_errors', 'on');
-error_reporting(0);
+/* 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL); */
 /*
 * 
 * This controller contains the common functions
@@ -512,38 +512,51 @@ class MY_Controller extends CI_Controller {
                     }
 
                     $usersList = $this->user_model->get_user_ids_from_device($collection, $regIds, $checkField);
+					
                     if ($usersList->num_rows() > 0) {
                         foreach ($usersList->result() as $ids) {
 							$token = '';
 							if ($app == 'DRIVER') {
+								
 								$token = $ids->push_notification['key'];
 							} else if ($app == 'USER') {
 								if ($type == 'ANDROID') {
 									$token = $ids->push_notification_key['gcm_id'];
+									
 								} else if ($type == 'IOS') {
 									$token = $ids->push_notification_key['ios_token'];
 								}
 							}
 							if(isset($ids->messaging_status)){
+								
 								if($ids->messaging_status == 'available' && ($type == 'IOS' || $type == 'ANDROID')){
 									$idss = array_search($token, $regIds);
+									
+									
+									
+									if(isset($ids->push_notification_key['ios_token'])){
 									if($idss !== false) {
-										/*unset($regIds[$idss]);*/
+										unset($regIds[$idss]);
+									}
 									}
 									$username = (string) $ids->_id;
 									if ($username != '') {
+										
 										$fields = array(
 											'username' => $username,
 											'message' => (string) $send_message
 										);
 										$url = $this->data['soc_url'] . 'sendMessage.php';
+										
 										$this->load->library('curl');
 										$output = $this->curl->simple_post($url, $fields);
 									}
 								}else if($ids->messaging_status == 'available'){
 									$idss = array_search($token, $regIds);
+									if(isset($ids->push_notification_key['ios_token'])){
 									if($idss !== false) {
-										/*unset($regIds[$idss]);*/
+									unset($regIds[$idss]); 
+									}
 									}
 									$username = (string) $ids->_id;
 									if ($username != '') {
@@ -558,8 +571,10 @@ class MY_Controller extends CI_Controller {
 								}
 							}else{
 								$idss = array_search($token, $regIds);
+								if(isset($ids->push_notification_key['ios_token'])){
 								if($idss !== false) {
-									/*unset($regIds[$idss]);*/
+								unset($regIds[$idss]);
+								}
 								}
 								$username = (string) $ids->_id;
 								if ($username != '') {

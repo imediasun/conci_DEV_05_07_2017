@@ -1,12 +1,17 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
 
+use Intervention\Image\ImageManagerStatic as Image;
+
 /**
 * 
 * This controller contains the functions related to Drivers at the app end
 * @author Casperon
 *
 * */
+
+
 class Drivers extends MY_Controller {
+
 
     function __construct() {
         parent::__construct();
@@ -3142,16 +3147,27 @@ class Drivers extends MY_Controller {
         echo $this->cleanString($json_encode);
     }
 	
-	public function customMultiSort($array,$field) {
-		$sortArr = array();
-		foreach($array as $key=>$val){
-			$sortArr[$key] = $val[$field];
-		}
+//	public function customMultiSort($array,$field) {
+//		$sortArr = array();
+//		foreach($array as $key=>$val){
+//			$sortArr[$key] = $val[$field];
+//		}
+//
+//		array_multisort($sortArr,$array);
+//
+//		return $array;
+//	}
 
-		array_multisort($sortArr,$array);
+    public function customMultiSort($array,$field) {
+        $sortArr = array();
+        foreach($array as $key=>$val){
+            $sortArr[$key] = $val[$field];
+        }
 
-		return $array;
-	}
+        array_multisort($sortArr, SORT_DESC, $array);
+
+        return $array;
+    }
 	
     public function provider_last_job_summery()
     {
@@ -3420,28 +3436,51 @@ class Drivers extends MY_Controller {
         echo $this->cleanString($json_encode);
     }
 	
-	   public function edit_provider_image()
+     public function edit_provider_image()
     {
-	 
+
+
         $returnArr['status'] = '0';
         $returnArr['response'] = '';
-        try {
-			
-            $driver_id = $this->input->post('driver_id');
-            $dir = 'images/drivers/';
-            $file = $_FILES['image']['name'];
-			
-			$newFile = uniqid() . '_' . $file;
-			if (move_uploaded_file($_FILES['image']['tmp_name'], $dir . $newFile)) {
-		
-            $image_status=1;
 
-        } else {
-			
-           $image_status=0;
-        }
-		
-		
+
+
+
+
+        try {
+
+            $driver_id = $this->input->post('driver_id');
+            $dir = FCPATH . 'images/users/';
+            $file = $_FILES['image']['tmp_name'];
+            $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+            $newImageName =  uniqid($driver_id . '_' . time() . '_') . '.' . $ext;
+
+            foreach($this->config->item('driverConfigImage') as $type => $singleResize) {
+                if($type=='original'){
+                $type='';
+                }
+                else{
+                $type='thumb';
+                }
+                $image = Image::make($file);
+                if($singleResize['resize']) {
+                    $image = $image->resize($singleResize['width'], $singleResize['height']);
+                }
+                $currentDir = $dir . $type . '/';
+                if(!is_dir($currentDir)) {
+                    mkdir($currentDir , 777);
+                }
+                if($image->save($currentDir  . $newImageName)) {
+                    $image_status=1;
+                } else {
+                    $image_status=0;
+                }
+
+            }
+
+
+
+           $i = 0;
            if (isset($driver_id) and isset($file)) {
                 if (!empty($driver_id)) {
 					
@@ -3450,13 +3489,14 @@ class Drivers extends MY_Controller {
                     if ($driver_details->num_rows() > 0) {
 						if($image_status==1){
                     
-                                if ($this->driver_model->update_details(DRIVERS,array('image'=>$newFile), array('_id' => new MongoId($driver_id)))) {
+                                if ($this->driver_model->update_details(DRIVERS,array('image' => $newImageName), array('_id' => new MongoId($driver_id)))) {
                                     $returnArr['status'] = '1';
                                 }
                                 $string ="image changed successfuly";
 
                                 $returnArr['response']['message'][$i] = $this->format_string($string, $string);
-                                
+                                $returnArr['response']['test'] = $newImageName;
+
                      
 						}
 						else{
@@ -3476,6 +3516,7 @@ class Drivers extends MY_Controller {
             $returnArr['response'] = $this->format_string("Error in connection", "error_in_connection");
         }
         $json_encode = json_encode($returnArr, JSON_PRETTY_PRINT);
+
         echo $this->cleanString($json_encode);
     }
 

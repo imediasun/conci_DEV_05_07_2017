@@ -2444,6 +2444,7 @@ class User extends MY_Controller {
                         $avg=0;
                         $avg_count=0;
                         //calculate reviews count
+						
                         foreach($get_ratings->result() as $key=>$rating){
 
                             foreach($rating->ratings['rider']['ratings'] as $rateOptions){
@@ -2457,6 +2458,7 @@ class User extends MY_Controller {
                             }
 
                         }
+						
                         $avg=$avg/$avg_count;
                         $commonAvgRates = $usersTotalRates/$commonNumTotal;
                         $summaryRateArr = array('totalRates' => $usersTotalRates,'commonNumTotal' => $avg_count,'commonAvgRates' => $commonAvgRates);
@@ -2465,6 +2467,7 @@ class User extends MY_Controller {
 
 
                         if ($checkUser->row()->push_type != '') {
+							
                             $coordinates = array(floatval($pickup_lon), floatval($pickup_lat));
                             $location = $this->app_model->find_location(floatval($pickup_lon), floatval($pickup_lat));
                             if (!empty($location['result'])) {
@@ -2618,15 +2621,17 @@ class User extends MY_Controller {
 
                                         $options = array($ride_id, $response_time, $pickup, $drop_loc,$this->push_data);//it works ??
                                         if (!empty($android_driver)) {
+											
                                             foreach ($push_and_driver as $keys => $value) {
                                                 $driver_id = $value;
                                                 $condition = array('_id' => new \MongoId($driver_id));
                                                 $this->cimongo->where($condition)->inc('req_received', 1)->update(DRIVERS);
                                             }
-
+										
                                             $this->sendPushNotification($android_driver, $message, 'ride_request', 'ANDROID', $options, 'DRIVER');
                                         }
                                         if (!empty($apple_driver)) {
+											
                                             foreach ($push_ios_driver as $keys => $value) {
                                                 $driver_id = $value;
                                                 $condition = array('_id' => new \MongoId($driver_id));

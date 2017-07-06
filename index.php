@@ -18,6 +18,7 @@
  * NOTE: If you change these, also change the error_reporting() code below
  *
  */
+
 define('ENVIRONMENT', 'development');
 /*
  * ---------------------------------------------------------------
@@ -31,6 +32,8 @@ define('ENVIRONMENT', 'development');
 if (defined('ENVIRONMENT')) {
     switch (ENVIRONMENT) {
         case 'development':
+            ini_set('display_errors', 1);
+            ini_set('display_startup_errors', 1);
             error_reporting(E_ALL);
             break;
 
@@ -185,7 +188,10 @@ if (is_dir($application_folder)) {
  * And away we go...
  *
  */
+
+require 'vendor/autoload.php';
 require_once BASEPATH . 'core/CodeIgniter.php';
+
 
 /* End of file index.php */
 /* Location: ./index.php */

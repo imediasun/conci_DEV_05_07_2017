@@ -6,9 +6,11 @@
 * @author Casperon
 *
 * */
+
 class User extends MY_Controller {
 
     function __construct() {
+
         parent::__construct();
         $this->load->helper(array('cookie', 'date', 'form', 'email','ride_helper'));
         $this->load->library(array('encrypt', 'form_validation'));
@@ -769,8 +771,10 @@ class User extends MY_Controller {
      *
      * */
     public function login_user() {
+
         $returnArr['status'] = '0';
         $returnArr['message'] = '';
+
         try {
             $email = strtolower($this->input->post('email'));
             $password = $this->input->post('password');
@@ -1409,7 +1413,7 @@ class User extends MY_Controller {
      *
      * */
     public function get_drivers_in_map() {
-		
+
         #print_r(json_encode($_POST)); die;
         $limit = 1000;
         $returnArr['status'] = '0';
@@ -1548,12 +1552,33 @@ class User extends MY_Controller {
 											$distance_unit = $location['result'][0]['distance_unit'];
 										} 
 									}
-									
+
+
 									$min = $this->format_string('min', 'min');
 									$first = $this->format_string('First', 'first');
 									$after = $this->format_string('After', 'after');
 									$ride_time_rate_post = $this->format_string('Ride time rate post ', 'ride_time_rate_post');
 									if (isset($location['result'][0]['fare'])) {
+
+
+
+                                        //get minimum price for this location
+                                        /*$location_ = $this->app_model->get_selected_fields(LOCATIONS, array('_id' => new \MongoId($driver_location)),array('fare'));*/
+                                        /*$checkModel = $this->app_model->get_selected_fields(VEHICLES, array('_id' => new \MongoId($driver['vehicle_type'])), array('max_seating'));*/
+
+
+                                            foreach($location['result'][0]['fare'] as $key=>$val) {
+
+                                                if ($key == $category) {
+
+                                                    if (isset($val['min_fare']) and !empty($val['min_fare'])) {
+                                                        $booking_fee = $val['min_fare'];
+                                                    } else {
+                                                        $booking_fee = "No result";
+                                                    }
+                                                }
+                                            }
+
 										if (array_key_exists($category, $location['result'][0]['fare'])) {
 											if($location['result'][0]['fare'][$category]['min_time']>1){
 												$min_time_unit = $mins_short;
@@ -1562,8 +1587,9 @@ class User extends MY_Controller {
 											}
 											$fare['min_fare'] = array('amount' => (string) $location['result'][0]['fare'][$category]['min_fare'],
 												'text' =>'Max Person' /* $first . ' ' . $location['result'][0]['fare'][$category]['min_km'] . ' ' . $distance_unit */);
-											$fare['after_fare'] = array('amount' => (string) $location['result'][0]['fare'][$category]['per_km'] . '/' . $distance_unit,
-												'text' => 'Booking Fee'/* $after . ' ' . $location['result'][0]['fare'][$category]['min_km'] . ' ' . $distance_unit */);
+											$fare['after_fare'] = array('amount' => $booking_fee/*(string) $location['result'][0]['fare'][$category]['per_km'] . '/' . $distance_unit*/,
+
+												'text' => 'Min. Fare'/* $after . ' ' . $location['result'][0]['fare'][$category]['min_km'] . ' ' . $distance_unit */);
 											$fare['other_fare'] = array('amount' => (string) $location['result'][0]['fare'][$category]['per_minute'] . '/' . $mins,
 												 'text' => $ride_time_rate_post . ' ' . $location['result'][0]['fare'][$category]['min_time'] . ' ' . $min_time_unit  ,
 												);
@@ -1576,20 +1602,55 @@ class User extends MY_Controller {
 							$driverList = $this->app_model->get_nearest_driver($coordinates, $category, $limit);
 							
 							$driversArr = array();
+
 							if (!empty($driverList['result'])) {
+
 								foreach ($driverList['result'] as $driver) {
+
+                                    $image = [
+                                        'image' => USER_PROFILE_IMAGE .'default.jpg',
+                                        'thumb' => USER_PROFILE_IMAGE .'thumb/'.'default.jpg',
+                                    ];
+
+                                    foreach($this->config->item('driverConfigImage') as $type => $single) {
+                                        if(isset($driver['image'])) {
+                                            if($type=='original'){
+
+                                                $image['image']= USER_PROFILE_IMAGE .$driver['image'];
+                                            }
+                                            else{
+                                                $filename = USER_PROFILE_IMAGE .'thumb/'.$driver['image'];
+
+                                                if (file_exists($filename)) {
+
+                                                    $image['thumb']= USER_PROFILE_IMAGE .'thumb/'.$driver['image'];
+                                                }
+
+
+                                            }
+                                        }
+                                    }
 									$lat = $driver['loc']['lat'];
 									$lon = $driver['loc']['lon'];
 									$driversArr[] = array('lat' => $lat,
-										'lon' => $lon
+										'lon' => $lon,
+                                        'image'=> $image
+
 									);
 									/* var_dump($driver['vehicle_type']);die; */
-									$checkModel = $this->app_model->get_selected_fields(VEHICLES, array('_id' => new \MongoId($driver['vehicle_type'])), array('max_seating'));
-									
-									$driversArr[]['maxPerson']=$checkModel->row()->max_seating; 
-									$driversArr[]['bookingFee']='';
+
+
+                                $driver_location=$driver['driver_location'];
 								}
+
+
+
 							}
+							else{
+
+
+                            }
+
 							if (empty($categoryArr)) {
 								$categoryArr = json_decode("{}");
 							} if (empty($driversArr)) {
@@ -1597,8 +1658,10 @@ class User extends MY_Controller {
 							} if (empty($rateCard)) {
 								$rateCard = json_decode("{}");
 							}
-							
-							
+
+							$rateCard['maxPerson']=(string)2;
+                            /*$rateCard['booking_fee']=$booking_fee;*/
+
 							$returnArr['status'] = '1';
 							$returnArr['response'] = array('currency' => (string) $this->data['dcurrencyCode'], 'category' => $categoryArr, 'drivers' => $driversArr, 'ratecard' => $rateCard, 'selected_category' => (string) $category);
 						} else {

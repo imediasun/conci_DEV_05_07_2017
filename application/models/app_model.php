@@ -125,7 +125,16 @@ class App_model extends My_Model {
 			$distanceMultiplier = 1;
 		}
 		
-		
+		if($category == '55a7b915cae2aa4008000029') { // Random
+            $category = array('$in' =>
+            array(
+                new \MongoId("55a7b349cae2aa0408000029"), // Man
+                new \MongoId("55c47f9bcae2aa4408000029"), // Woman
+            ));
+        } else {
+            $category = array('$eq' => new \MongoId($category));
+        }
+
         $option = array(
             array(
                 '$geoNear' => array("near" => array("type" => "Point",
@@ -141,6 +150,7 @@ class App_model extends My_Model {
             ),
             array(
                 '$project' => array(
+                    'driver_location' => 1,
                     'category' => 1,
                     'driver_name' => 1,
                     'loc' => 1,
@@ -164,7 +174,7 @@ class App_model extends My_Model {
                     'status' => array('$eq' => 'Active'),
                     'mode' => array('$eq' => 'Available'),
                     'verify_status' => array('$eq' => 'Yes'),
-                    'category' => array('$eq' => new \MongoId($category)),
+                    'category' => $category,
                     'last_active_time' => array('$gte' => new \MongoDate(time()-1800))
                 )
             ),

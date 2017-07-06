@@ -415,6 +415,15 @@ define('ADMIN_ENC_URL' , 'jaya');
 $config['adminPrev'] = array('user', 'driver', 'banner', 'brand', 'cancellation', 'cms', 'templates', 'currency', 'documents', 'rides', 'vehicle', 'promocode', 'location', 'payment_gateway', 'reviews');
 
 
-
+$config['driverConfigImage'] = [
+    'original'  => [
+        'resize' => false,
+    ],
+    'thumb' => [
+        'resize' => true,
+        'width'  => '32',
+        'height' => '32',
+    ],
+];
 /* End of file config.php */
 /* Location: ./application/config/config.php */
