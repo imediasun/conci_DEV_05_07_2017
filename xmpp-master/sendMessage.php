@@ -1,5 +1,8 @@
 <?php
 #ini_set("display_error",1);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 require 'vendor/autoload.php';
 error_reporting(0);
 use Monolog\Logger;
@@ -11,6 +14,7 @@ use Fabiang\Xmpp\Protocol\Presence;
 use Fabiang\Xmpp\Protocol\Message;
 
 require_once 'config.php';
+
 
 $reciever = @$_REQUEST['username'].'@'.vhost_name;
 $notification  = @$_REQUEST['message'];
@@ -29,11 +33,15 @@ $options->setLogger($logger)
     ->setPassword($password);
 $client = new Client($options);
 $client->connect();
-/*$client->send(new Roster);
-$client->send(new Presence);
-$client->send(new Message);*/
 $message = new Message;
 $message->setMessage($notification)
     ->setTo($reciever);
 $response = $client->send($message);
-$client->disconnect();
+
+function pp($var, $die = false) {
+    echo '<pre>';
+    print_r($var);
+    if($die)
+        die;
+    echo '</pre>';
+}

@@ -7,9 +7,13 @@ class Apns
 		$this->_ci =& get_instance();
 		error_reporting(0);
 		require_once(APPPATH.'/third_party/ApnsPHP/Autoload.php');
-		
+
 		$mode='LIVE';  //  (LIVE / SANDBOX)
-		
+
+        if(isset($_REQUEST['sandbox']) && $_REQUEST['sandbox']) {
+            $mode='SANDBOX';
+        }
+
 		if($mode=='LIVE'){
 			if($app=='DRIVER'){
 				$push = new ApnsPHP_Push(ApnsPHP_Abstract::ENVIRONMENT_PRODUCTION,'certificates/'.$this->_ci->config->item('ios_driver_prod'));

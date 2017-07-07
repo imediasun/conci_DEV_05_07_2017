@@ -1,8 +1,8 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
-/* 
-ini_set('display_errors', 1);
+
+/*ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
-error_reporting(E_ALL); */
+error_reporting(E_ALL);*/
 /*
 * 
 * This controller contains the common functions
@@ -24,8 +24,11 @@ class MY_Controller extends CI_Controller {
     Public $Userid = '';
     Public $Driverid = '';
     Public $Token = '';
-	
-	
+
+    private $use_xmpp = false; // Should we use xmpp for pushes or just the native way
+
+
+
     Public $temp_lang = '';
 
     function __construct() {
@@ -467,8 +470,11 @@ class MY_Controller extends CI_Controller {
      * @param Array $urlval 
      * */
     public function sendPushNotification($regIds, $message = '', $action = '', $type = '', $urlval = array(), $app = '') {
-	
+
+        // Enter only if have message
         if ($message != '') {
+
+            // Prepare the push response object
             $msg = array();
             $msg ['message'] = $this->format_string($message);
             $msg ['action'] = $action;
@@ -476,130 +482,97 @@ class MY_Controller extends CI_Controller {
                 $msg['data']=json_encode($urlval[4]);
             }
 
-			
+            // Anything other then driver location changed
             $i = 1;
 			if($msg['action']!="driver_loc"){
 				foreach ($urlval as $vals) {
-					$msg['key' . $i] = (string) $vals;
+ 					$msg['key' . $i] = is_array($vals) ? json_encode($vals) : (String) $vals;
 					$i++;
 				}
 			}
+
+            // Driver location changed
 			if($msg['action']=="driver_loc"){
 				$msg ['latitude'] = (string)$urlval['latitude'];
 				$msg ['longitude'] = (string)$urlval['longitude'];
 				$msg ['bearing'] = (string)$urlval['bearing'];
 				$msg ['ride_id'] = (string)$urlval['ride_id'];
 			}
-            if (is_array($regIds)) {
-                $regIds = $regIds;
-            } else {
+
+			// If ids is a simple item - make an array
+            if (!is_array($regIds)) {
                 $regIds = array($regIds);
             }
 
-            if (!empty($regIds) && ($type == 'ANDROID' || $type == 'IOS')) {
+            // Xmpp (Socket)
+            // Send the push object Via socket
+            if($this->use_xmpp && !empty($regIds) && ($type == 'ANDROID' || $type == 'IOS')) {
                 $send_message = urlencode(json_encode($msg));
-                if (!empty($regIds)) {
-                    if ($app == 'DRIVER') {
-                        $collection = DRIVERS;
-                        $checkField = 'push_notification.key';
-                    } else if ($app == 'USER') {
-                        $collection = USERS;
-                        if ($type == 'ANDROID') {
-                            $checkField = 'push_notification_key.gcm_id';
-                        } else if ($type == 'IOS') {
-                            $checkField = 'push_notification_key.ios_token';
-                        }
-                    }
 
-                    $usersList = $this->user_model->get_user_ids_from_device($collection, $regIds, $checkField);
-					
-                    if ($usersList->num_rows() > 0) {
-                        foreach ($usersList->result() as $ids) {
-							$token = '';
-							if ($app == 'DRIVER') {
-								
-								$token = $ids->push_notification['key'];
-							} else if ($app == 'USER') {
-								if ($type == 'ANDROID') {
-									$token = $ids->push_notification_key['gcm_id'];
-									
-								} else if ($type == 'IOS') {
-									$token = $ids->push_notification_key['ios_token'];
-								}
-							}
-							if(isset($ids->messaging_status)){
-								
-								if($ids->messaging_status == 'available' && ($type == 'IOS' || $type == 'ANDROID')){
-									$idss = array_search($token, $regIds);
-									
-									
-									
-									if(isset($ids->push_notification_key['ios_token'])){
-									if($idss !== false) {
-										unset($regIds[$idss]);
-									}
-									}
-									$username = (string) $ids->_id;
-									if ($username != '') {
-										
-										$fields = array(
-											'username' => $username,
-											'message' => (string) $send_message
-										);
-										$url = $this->data['soc_url'] . 'sendMessage.php';
-										
-										$this->load->library('curl');
-										$output = $this->curl->simple_post($url, $fields);
-									}
-								}else if($ids->messaging_status == 'available'){
-									$idss = array_search($token, $regIds);
-									if(isset($ids->push_notification_key['ios_token'])){
-									if($idss !== false) {
-									unset($regIds[$idss]); 
-									}
-									}
-									$username = (string) $ids->_id;
-									if ($username != '') {
-										$fields = array(
-											'username' => $username,
-											'message' => (string) $send_message
-										);
-										$url = $this->data['soc_url'] . 'sendMessage.php';
-										$this->load->library('curl');
-										$output = $this->curl->simple_post($url, $fields);
-									}
-								}
-							}else{
-								$idss = array_search($token, $regIds);
-								if(isset($ids->push_notification_key['ios_token'])){
-								if($idss !== false) {
-								unset($regIds[$idss]);
-								}
-								}
-								$username = (string) $ids->_id;
-								if ($username != '') {
-									$fields = array(
-										'username' => $username,
-										'message' => (string) $send_message
-									);
-									$url = $this->data['soc_url'] . 'sendMessage.php';
-									$this->load->library('curl');
-									$output = $this->curl->simple_post($url, $fields);
-								}
-							}
+                //We prepare variables
+                if ($app == 'DRIVER') {
+                    $collection = DRIVERS;
+                    $checkField = 'push_notification.key';
+                } else if ($app == 'USER') {
+                    $collection = USERS;
+                    if ($type == 'ANDROID') {
+                        $checkField = 'push_notification_key.gcm_id';
+                    } else if ($type == 'IOS') {
+                        $checkField = 'push_notification_key.ios_token';
+                    }
+                }
+
+                //get an object of all users which correspond to conditions
+                $usersList = $this->user_model->get_user_ids_from_device($collection, $regIds, $checkField);
+
+                // Validate that there is atlist one user
+                if ($usersList->num_rows() > 0) {
+
+                    // Foreach user witch corespond to conditions Set the token from push notification key
+                    foreach ($usersList->result() as $ids) {
+
+                        $token = '';
+                        if ($app == 'DRIVER') {
+                            $token = $ids->push_notification['key'];
+                        } else if ($app == 'USER') {
+                            if ($type == 'ANDROID') {
+                                $token = $ids->push_notification_key['gcm_id'];
+
+                            } else if ($type == 'IOS') {
+                                $token = $ids->push_notification_key['ios_token'];
+                            }
+                        }
+
+                        if(array_search($token, $regIds) !== false) {
+
+                            $username = (string) $ids->_id;
+                            if ($username != '') {
+                                $fields = array(
+                                    'username' => $username,
+                                    'message'  => (string) $send_message
+                                );
+                                $url = $this->data['soc_url'] . 'sendMessage.php';
+                                $this->load->library('curl');
+                                $output = $this->curl->simple_post($url, $fields);
+                            }
                         }
                     }
                 }
             }
 
-			if (!empty($regIds) && $type == 'ANDROID') {
-				$this->sendPushNotificationToGCMOrg($regIds, $msg, $app);
-				
-			}
-			if (!empty($regIds) && $type == 'IOS') {
-
-                $this->push_notification($regIds, $msg, $app);
-			}
+            // Send the push object Via GCM / APNS
+            if(!empty($regIds)) { //empty array
+                switch ($type) {
+                    // Gcm (Google could massaging)
+                    case 'ANDROID':
+                        $this->sendPushNotificationToGCMOrg($regIds, $msg, $app);
+                        break;
+                    // Apns (Apple)
+                    case 'IOS':
+                        $this->push_notification($regIds, $msg, $app);
+                        break;
+                }
+            }
         }
     }
 
@@ -1210,4 +1183,20 @@ class MY_Controller extends CI_Controller {
 	   return false;        
 	  }
   }
+
+  // Private helpers
+    private function debug($var, $die = false) {
+        echo '<pre>';
+        var_dump($var);
+        if($die)
+            die;
+        echo '</pre>';
+    }
+    private function pp($var, $die = false) {
+        echo '<pre>';
+        print_r($var);
+        if($die)
+            die;
+        echo '</pre>';
+    }
 }

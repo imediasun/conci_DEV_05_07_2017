@@ -1415,7 +1415,279 @@ class User extends MY_Controller {
      * This Function return the drivers information for map view
      *
      * */
-    public function get_drivers_in_map() {
+	 
+	   public function get_drivers_in_map() {
+
+        #print_r(json_encode($_POST)); die;
+        $limit = 1000;
+        $returnArr['status'] = '0';
+        $returnArr['response'] = '';
+        try {
+            $user_id = trim($this->input->post('user_id'));
+            $latitude = $this->input->post('lat');
+            $longitude = $this->input->post('lon');
+            $category = $this->input->post('category');
+
+            if (is_array($this->input->post())) {
+                $chkValues = count(array_filter($this->input->post()));
+            } else {
+                $chkValues = 0;
+            }
+
+			if($category!=''){
+				if ($chkValues >= 3) {
+					$checkUser = $this->app_model->get_selected_fields(USERS, array('_id' => new \MongoId($user_id)), array('email','xmpp_connected'));
+                    $geo_data_user = array('loc' => array('lon' => floatval($longitude), 'lat' => floatval($latitude)),'last_active_time'=>new \MongoDate(time()));
+                    $this->user_model->update_details(USERS, $geo_data_user, array('_id' => new \MongoId($user_id)));
+					if ($checkUser->num_rows() == 1) {
+						$xmpp_connected = 'No';
+						 if(isset($checkUser->row()->xmpp_connected)){
+							$xmpp_connected = $checkUser->row()->xmpp_connected;
+						 }
+						 if($xmpp_connected != 'Yes'){
+							/************  connect users with xmpp ************/
+							$fields = array(
+										'username' => (string) $user_id,
+										'password' => md5((string) $user_id)
+									 );
+							$url = $this->data['soc_url'] . 'create-user.php';
+							$this->load->library('curl');
+							$output = $this->curl->simple_post($url, $fields);
+							
+							$this->user_model->update_details(USERS,array('xmpp_connected' => 'Yes'),array('_id' => new \MongoId($user_id)));
+						 }
+						$coordinates = array(floatval($longitude), floatval($latitude));
+						$location = $this->app_model->find_location(floatval($longitude), floatval($latitude),"Yes");
+						
+						if (!empty($location['result'])) {
+							$condition = array('status' => 'Active');
+							/*
+								Make the final category list
+							*/
+							$final_cat_list = $location['result'][0]['avail_category'];
+							if (array_key_exists('avail_category', $location['result'][0]) && array_key_exists('fare', $location['result'][0])) {
+								if (!empty($location['result'][0]['avail_category']) && !empty($location['result'][0]['fare'])) {
+									$cat_avail = $location['result'][0]['avail_category'];
+									$cat_fare = array_keys($location['result'][0]['fare']);
+									$final_cat_list = array_intersect($cat_avail,$cat_fare);
+								}
+							}
+							$categoryResult = $this->app_model->get_available_category(CATEGORY, $final_cat_list);
+							$availCategory = array();
+							$categoryArr = array();
+							$rateCard = array();
+							$vehicle_type = '';
+							if ($categoryResult->num_rows() > 0) {
+								foreach ($categoryResult->result() as $cat) {
+									$availCategory[(string) $cat->_id] = $cat->name;
+									$category_drivers = $this->app_model->get_nearest_driver($coordinates, (string) $cat->_id, $limit);
+									
+									#$mins = $this->format_string('mins', 'mins');
+									$mins = $this->format_string('min', 'min_short');
+									$mins_short = $this->format_string('mins', 'mins_short');
+									$no_cabs = $this->format_string('no cabs', 'no_cabs');
+									if (!empty($category_drivers['result'])) {
+										$distance = $category_drivers['result'][0]['distance'];
+										$eta_time = $this->app_model->calculateETA($distance);
+										if($eta_time>1){
+											$eta_unit = $mins_short;
+										}else{
+											$eta_unit = $mins;
+										}
+										$eta = $this->app_model->calculateETA($distance) . ' ' . $mins;
+									} else {
+										$eta_time = "";
+										$eta_unit = "";
+										$eta = $no_cabs;
+									}
+									$avail_vehicles = array();
+									if ((string) $cat->_id == $category) {
+										$avail_vehicles = $cat->vehicle_type;
+									}
+									$icon_normal = base_url() . ICON_IMAGE_DEFAULT;
+									$icon_active = base_url() . ICON_IMAGE_ACTIVE;
+									$icon_car_image = base_url().ICON_MAP_CAR_IMAGE;
+
+									if (isset($cat->icon_normal)) {
+										if ($cat->icon_normal != '') {
+											$icon_normal = base_url() . ICON_IMAGE . $cat->icon_normal;
+										}
+									}
+									if (isset($cat->icon_active)) {
+										if ($cat->icon_active != '') {
+											$icon_active = base_url() . ICON_IMAGE . $cat->icon_active;
+										}
+									}
+									if (isset($cat->icon_car_image)) {
+										if ($cat->icon_car_image != '') {
+											$icon_car_image = base_url() . ICON_IMAGE . $cat->icon_car_image;
+										}
+									}
+									
+
+									$categoryArr[] = array('id' => (string) $cat->_id,
+										'name' => $cat->name,
+										'eta' => (string) $eta,
+										'eta_time' => (string) $eta_time,
+										'eta_unit' => (string) $eta_unit,
+										'icon_normal' => (string) $icon_normal,
+										'icon_active' => (string) $icon_active,
+										'icon_car_image' => (string) $icon_car_image	
+									);
+								}
+								$vehicleResult = $this->app_model->get_available_vehicles($avail_vehicles);
+								if ($vehicleResult->num_rows() > 0) {
+									$vehicleArr = (array) $vehicleResult->result_array();
+									$vehicle_type = implode(',', array_map(function($n) {
+												return $n['vehicle_type'];
+											}, $vehicleArr));
+								}
+								$note_heading = $this->format_string('Note', 'note_heading');
+								$note_peak_time = $this->format_string('Peak time charges may apply. Service tax extra.', 'note_peak_time');
+								if (isset($availCategory[(string) $category])) {
+									$rateCard['category'] = $availCategory[(string) $category];
+									$rateCard['vehicletypes'] = $vehicle_type;
+									$rateCard['note'] = $note_heading.' : '.$note_peak_time;
+									$fare = array();
+									
+									$distance_unit = $this->data['d_distance_unit'];
+									if(isset($location['result'][0]['distance_unit'])){
+										if($location['result'][0]['distance_unit'] != ''){
+											$distance_unit = $location['result'][0]['distance_unit'];
+										} 
+									}
+
+
+									$min = $this->format_string('min', 'min');
+									$first = $this->format_string('First', 'first');
+									$after = $this->format_string('After', 'after');
+									$ride_time_rate_post = $this->format_string('Ride time rate post ', 'ride_time_rate_post');
+									if (isset($location['result'][0]['fare'])) {
+
+
+
+                                        //get minimum price for this location
+                                        /*$location_ = $this->app_model->get_selected_fields(LOCATIONS, array('_id' => new \MongoId($driver_location)),array('fare'));*/
+                                        /*$checkModel = $this->app_model->get_selected_fields(VEHICLES, array('_id' => new \MongoId($driver['vehicle_type'])), array('max_seating'));*/
+
+
+                                            foreach($location['result'][0]['fare'] as $key=>$val) {
+
+                                                if ($key == $category) {
+
+                                                    if (isset($val['min_fare']) and !empty($val['min_fare'])) {
+                                                        $booking_fee = $val['min_fare'];
+                                                    } else {
+                                                        $booking_fee = "No result";
+                                                    }
+                                                }
+                                            }
+
+										if (array_key_exists($category, $location['result'][0]['fare'])) {
+											if($location['result'][0]['fare'][$category]['min_time']>1){
+												$min_time_unit = $mins_short;
+											}else{
+												$min_time_unit = $mins;
+											}
+											$fare['min_fare'] = array('amount' => (string) $location['result'][0]['fare'][$category]['min_fare'],
+												'text' =>'Max Person' /* $first . ' ' . $location['result'][0]['fare'][$category]['min_km'] . ' ' . $distance_unit */);
+											$fare['after_fare'] = array('amount' => $booking_fee/*(string) $location['result'][0]['fare'][$category]['per_km'] . '/' . $distance_unit*/,
+
+												'text' => 'Min. Fare'/* $after . ' ' . $location['result'][0]['fare'][$category]['min_km'] . ' ' . $distance_unit */);
+											$fare['other_fare'] = array('amount' => (string) $location['result'][0]['fare'][$category]['per_minute'] . '/' . $mins,
+												 'text' => $ride_time_rate_post . ' ' . $location['result'][0]['fare'][$category]['min_time'] . ' ' . $min_time_unit  ,
+												);
+										}
+									}
+									$rateCard['farebreakup'] = $fare;
+								}
+							}
+
+							$driverList = $this->app_model->get_nearest_driver($coordinates, $category, $limit);
+							
+							$driversArr = array();
+
+							if (!empty($driverList['result'])) {
+
+								foreach ($driverList['result'] as $driver) {
+
+                                    $image = [
+                                        'image' => USER_PROFILE_IMAGE .'default.jpg',
+                                        'thumb' => USER_PROFILE_IMAGE .'thumb/'.'default.jpg',
+                                    ];
+
+                                    foreach($this->config->item('driverConfigImage') as $type => $single) {
+                                        if(isset($driver['image'])) {
+                                            if($type=='original'){
+
+                                                $image['image']= USER_PROFILE_IMAGE .$driver['image'];
+                                            }
+                                            else{
+                                                $filename = USER_PROFILE_IMAGE .'thumb/'.$driver['image'];
+
+                                                if (file_exists($filename)) {
+
+                                                    $image['thumb']= USER_PROFILE_IMAGE .'thumb/'.$driver['image'];
+                                                }
+
+
+                                            }
+                                        }
+                                    }
+									$lat = $driver['loc']['lat'];
+									$lon = $driver['loc']['lon'];
+									$driversArr[] = array('lat' => $lat,
+										'lon' => $lon,
+                                        'image'=> $image
+
+									);
+									/* var_dump($driver['vehicle_type']);die; */
+
+
+                                $driver_location=$driver['driver_location'];
+								}
+
+
+
+							}
+							else{
+
+
+                            }
+
+							if (empty($categoryArr)) {
+								$categoryArr = json_decode("{}");
+							} if (empty($driversArr)) {
+								$driversArr = json_decode("{}");
+							} if (empty($rateCard)) {
+								$rateCard = json_decode("{}");
+							}
+
+							$rateCard['maxPerson']=(string)2;
+                            /*$rateCard['booking_fee']=$booking_fee;*/
+
+							$returnArr['status'] = '1';
+							$returnArr['response'] = array('currency' => (string) $this->data['dcurrencyCode'], 'category' => $categoryArr, 'drivers' => $driversArr, 'ratecard' => $rateCard, 'selected_category' => (string) $category);
+						} else {
+							$returnArr['response'] = $this->format_string('Sorry ! We do not provide services in your city yet.', 'service_unavailable_in_your_city');
+						}
+					} else {
+						$returnArr['response'] = $this->format_string("Invalid User", "invalid_user");
+					}
+				} else {
+					$returnArr['response'] = $this->format_string("Some Parameters Missing", "some_parameters_missing");
+				}
+			}else{
+					$returnArr['response'] = $this->format_string('Sorry ! We do not provide services in your city yet.', 'service_unavailable_in_your_city');
+			}
+        } catch (MongoException $ex) {
+            $returnArr['response'] = $this->format_string("Error in connection", "error_in_connection");
+        }
+        $json_encode = json_encode($returnArr, JSON_PRETTY_PRINT);
+        echo $this->cleanString($json_encode);
+    }
+ 
+/*     public function get_drivers_in_map() {
         $limit = 1000;
         $returnArr['status'] = '0';
         $returnArr['response'] = '';
@@ -1441,7 +1713,7 @@ class User extends MY_Controller {
                         $xmpp_connected = $checkUser->row()->xmpp_connected;
                      }
                      if($xmpp_connected != 'Yes'){
-                        /************  connect users with xmpp ************/
+                        
                         $fields = array(
                                     'username' => (string) $user_id,
                                     'password' => md5((string) $user_id)
@@ -1459,9 +1731,7 @@ class User extends MY_Controller {
 					
                     if (!empty($location['result'])) {
                         $condition = array('status' => 'Active');
-						/*
-							Make the final category list
-						*/
+						
 						$final_cat_list = $location['result'][0]['avail_category'];
 						if (array_key_exists('avail_category', $location['result'][0]) && array_key_exists('fare', $location['result'][0])) {
                             if (!empty($location['result'][0]['avail_category']) && !empty($location['result'][0]['fare'])) {
@@ -1481,7 +1751,7 @@ class User extends MY_Controller {
                                 $category_drivers = $this->app_model->get_nearest_driver($coordinates, (string) $cat->_id, $limit);
 								
 								
-								#$mins = $this->format_string('mins', 'mins');
+								
 								$mins = $this->format_string('min', 'min_short');
 								$mins_short = $this->format_string('mins', 'mins_short');
 								$no_cabs = $this->format_string('no cabs', 'no_cabs');
@@ -1634,7 +1904,7 @@ class User extends MY_Controller {
         }
         $json_encode = json_encode($returnArr, JSON_PRETTY_PRINT);
         echo $this->cleanString($json_encode);
-    }
+    } */
 
     /**
      *
@@ -2483,7 +2753,10 @@ class User extends MY_Controller {
                                     $apple_driver = array();
                                     $push_and_driver = array();
                                     $push_ios_driver = array();
+
+
                                     foreach ($category_drivers['result'] as $driver) {
+
                                         if (isset($driver['push_notification'])) {
                                             if ($driver['push_notification']['type'] == 'ANDROID') {
                                                 if (isset($driver['push_notification']['key'])) {
@@ -2628,8 +2901,11 @@ class User extends MY_Controller {
                                                 $this->cimongo->where($condition)->inc('req_received', 1)->update(DRIVERS);
                                             }
 										
-                                            $this->sendPushNotification($android_driver, $message, 'ride_request', 'ANDROID', $options, 'DRIVER');
+                                         $this->sendPushNotification($android_driver, $message, 'ride_request', 'ANDROID', $options, 'DRIVER');
                                         }
+
+
+
                                         if (!empty($apple_driver)) {
 											
                                             foreach ($push_ios_driver as $keys => $value) {

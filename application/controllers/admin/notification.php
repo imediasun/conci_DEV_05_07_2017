@@ -12,7 +12,7 @@ class Notification extends MY_Controller {
         $this->load->helper(array('cookie', 'date', 'form'));
         $this->load->library(array('encrypt', 'form_validation','curl'));
         $this->load->model(array('admin_model','notify_model'));
- 
+
         if ($this->checkPrivileges('user', $this->privStatus) == FALSE) {
             redirect('admin');
         }
@@ -423,7 +423,7 @@ class Notification extends MY_Controller {
 
 
         foreach ($usersList->result_array() as $user) {
-			var_dump($user);
+
             if (array_key_exists('push_notification', $user)) {
 
                 if ($user['push_notification']['type'] == 'ANDROID') {

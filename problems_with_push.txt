@@ -1,0 +1,47 @@
+Problem #1
+
+When Android client cannot receive push
+it recieve a message
+
+Connection closed with error
+org.jivesoftware.smack.SmackException: Parser got END_DOCUMENT event. 
+This could happen e.g. 
+if the server closed the connection without sending a closing stream element
+
+When we put errors output Android application fall down
+
+Problem #2 
+If we have unset() in 538,558,576 IOS application work perfectly,
+But Android application didnt recieve XMPP not GCM,
+but when I send request by postman IOS crashes
+
+
+Problem#2 Case 2
+
+Android application work not stable with Push XMPP not with GCM
+But I think this is because of This kind of XMPP
+
+When we comment unset() in 538,558,576
+
+IOS application receive 3 times Ride request,
+But Android application receive Ride request only in tray.
+
+
+And one question about tokens.
+Do we need to accept token to each API and is it depends with sessions?
+I didnt find such dependency.
+But I think Indians develope in application such possibility
+
+
+private function pp($var, $die = false) {
+    echo '<pre>';
+    print_r($var);
+    if($die)
+    die;
+    echo '</pre>';
+}
+$this->pp($idss, 1);
+
+
+
+
