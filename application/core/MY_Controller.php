@@ -504,61 +504,65 @@ class MY_Controller extends CI_Controller {
                 $regIds = array($regIds);
             }
 
-            // Xmpp (Socket)
-            // Send the push object Via socket
-            if($this->use_xmpp && !empty($regIds) && ($type == 'ANDROID' || $type == 'IOS')) {
-                $send_message = urlencode(json_encode($msg));
+            if($type == 'ANDROID') {
+                // Xmpp (Socket)
+                // Send the push object Via socket
+                if(!empty($regIds) && ($type == 'ANDROID' || $type == 'IOS')) {
+                    $send_message = urlencode(json_encode($msg));
 
-                //We prepare variables
-                if ($app == 'DRIVER') {
-                    $collection = DRIVERS;
-                    $checkField = 'push_notification.key';
-                } else if ($app == 'USER') {
-                    $collection = USERS;
-                    if ($type == 'ANDROID') {
-                        $checkField = 'push_notification_key.gcm_id';
-                    } else if ($type == 'IOS') {
-                        $checkField = 'push_notification_key.ios_token';
-                    }
-                }
-
-                //get an object of all users which correspond to conditions
-                $usersList = $this->user_model->get_user_ids_from_device($collection, $regIds, $checkField);
-
-                // Validate that there is atlist one user
-                if ($usersList->num_rows() > 0) {
-
-                    // Foreach user witch corespond to conditions Set the token from push notification key
-                    foreach ($usersList->result() as $ids) {
-
-                        $token = '';
-                        if ($app == 'DRIVER') {
-                            $token = $ids->push_notification['key'];
-                        } else if ($app == 'USER') {
-                            if ($type == 'ANDROID') {
-                                $token = $ids->push_notification_key['gcm_id'];
-
-                            } else if ($type == 'IOS') {
-                                $token = $ids->push_notification_key['ios_token'];
-                            }
+                    //We prepare variables
+                    if ($app == 'DRIVER') {
+                        $collection = DRIVERS;
+                        $checkField = 'push_notification.key';
+                    } else if ($app == 'USER') {
+                        $collection = USERS;
+                        if ($type == 'ANDROID') {
+                            $checkField = 'push_notification_key.gcm_id';
+                        } else if ($type == 'IOS') {
+                            $checkField = 'push_notification_key.ios_token';
                         }
+                    }
 
-                        if(array_search($token, $regIds) !== false) {
+                    //get an object of all users which correspond to conditions
+                    $usersList = $this->user_model->get_user_ids_from_device($collection, $regIds, $checkField);
 
-                            $username = (string) $ids->_id;
-                            if ($username != '') {
-                                $fields = array(
-                                    'username' => $username,
-                                    'message'  => (string) $send_message
-                                );
-                                $url = $this->data['soc_url'] . 'sendMessage.php';
-                                $this->load->library('curl');
-                                $output = $this->curl->simple_post($url, $fields);
+                    // Validate that there is atlist one user
+                    if ($usersList->num_rows() > 0) {
+
+                        // Foreach user witch corespond to conditions Set the token from push notification key
+                        foreach ($usersList->result() as $ids) {
+
+                            $token = '';
+                            if ($app == 'DRIVER') {
+                                $token = $ids->push_notification['key'];
+                            } else if ($app == 'USER') {
+                                if ($type == 'ANDROID') {
+                                    $token = $ids->push_notification_key['gcm_id'];
+
+                                } else if ($type == 'IOS') {
+                                    $token = $ids->push_notification_key['ios_token'];
+                                }
                             }
+
+                              if(array_search($token, $regIds) !== false and $type=='ANDROID') {
+
+                                  $username = (string) $ids->_id;
+                                  if ($username != '') {
+                                      $fields = array(
+                                          'username' => $username,
+                                          'message'  => (string) $send_message
+                                      );
+                                      $url = $this->data['soc_url'] . 'sendMessage.php';
+                                      $this->load->library('curl');
+                                      $output = $this->curl->simple_post($url, $fields);
+                                  }
+                              }
                         }
                     }
                 }
             }
+
+
 
             // Send the push object Via GCM / APNS
             if(!empty($regIds)) { //empty array
