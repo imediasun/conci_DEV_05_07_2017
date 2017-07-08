@@ -471,6 +471,8 @@ class MY_Controller extends CI_Controller {
      * */
     public function sendPushNotification($regIds, $message = '', $action = '', $type = '', $urlval = array(), $app = '') {
 
+
+
         // Enter only if have message
         if ($message != '') {
 
@@ -499,7 +501,8 @@ class MY_Controller extends CI_Controller {
 				$msg ['ride_id'] = (string)$urlval['ride_id'];
 			}
 
-			// If ids is a simple item - make an array
+
+		// If ids is a simple item - make an array
             if (!is_array($regIds)) {
                 $regIds = array($regIds);
             }
