@@ -86,11 +86,14 @@ class Masking extends MY_Controller {
 		
 		try {
 			$ride_id = (string)$this->input->post('ride_id');
+
 			$user_type = (string)$this->input->post('user_type'); #(user/driver)
 			$checkRide = $this->app_model->get_all_details(RIDES, array('ride_id' => $ride_id));
+
 			if ($checkRide->num_rows() == 1) {
 				$ride_status = $checkRide->row()->ride_status;
-				$allowed_status = array('Confirmed','Arrived','Onride','Finished','Completed');
+
+				$allowed_status = array('Confirmed','Arrived','Onride','Finished','Completed','Cancelled'); //Cancelled надо будет убрать
 				if(in_array($ride_status,$allowed_status)){
 					
 					if($checkRide->row()->user['phone']){
@@ -115,10 +118,12 @@ class Masking extends MY_Controller {
 						$twilio_account_sid = $this->config->item('twilio_account_sid');
 						$twilio_auth_token  = $this->config->item('twilio_auth_token');
 						$twilio_number      = '+'.$this->config->item('twilio_number');
+
 						
 						try{
 							// this line loads the library 
-							require(APPPATH.'/third_party/twilio/Services/Twilio.php'); 
+							require(APPPATH.'/third_party/twilio/Services/Twilio.php');
+
 
 							$account_sid = $twilio_account_sid; 
 							$auth_token = $twilio_auth_token; 
@@ -135,8 +140,8 @@ class Masking extends MY_Controller {
 							$returnArr['status'] = '1';
 							$returnArr['response'] = $this->format_string("Please wait, we will call you back", "wait_will_call");
 						}catch(Exception $e){
-							#$returnArr['response'] = $e->getMessage();
-							$returnArr['response'] = $this->format_string("Number is unverified", "number_unverified");
+							$returnArr['response'] = $e->getMessage();
+							/*$returnArr['response'] = $this->format_string("Number is unverified", "number_unverified");*/
 						}
 					}else{
 						$returnArr['response'] = $this->format_string("Call not allowed", "call_not_allowed");
@@ -169,8 +174,9 @@ class Masking extends MY_Controller {
 			$ride_id = (string)$this->input->post('ride_id');
 			$user_type = (string)$this->input->post('user_type'); #(user/driver)
 			$sms_content = (string)$this->input->post('sms_content');
-			
+
 			$checkRide = $this->app_model->get_all_details(RIDES, array('ride_id' => $ride_id));
+
 			if ($checkRide->num_rows() == 1) {
 				$ride_status = $checkRide->row()->ride_status;
 				$allowed_status = array('Confirmed','Arrived','Onride','Finished','Completed');
@@ -195,7 +201,8 @@ class Masking extends MY_Controller {
 						$from = $this->config->item('twilio_number');
 						$to = $number_to_send_sms;
 						$message = $sms_content;
-						$response = $this->twilio->sms($from, $to, $message); 
+						$response = '';
+                        var_dump($this->twilio->sms($from, $to, $message));die;
 						$returnArr['status'] = '1';
 						$returnArr['response'] = $this->format_string("SMS sent successfully", "sms_sent");
 					}else{

@@ -174,7 +174,7 @@ class MY_Controller extends CI_Controller {
         }
         $this->data['auto_charge'] = $auto_card_pay;
 		
-		$this->data['phone_masking_status'] = 'Yes';
+		$this->data['phone_masking_status'] = 'No';//Yes
 
 		if($_SERVER['HTTP_HOST']=="192.168.1.251:8081"){
 			$this->data['soc_url'] = 'http://192.168.1.150/xmpp-master/';

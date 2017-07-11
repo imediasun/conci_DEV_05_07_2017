@@ -4300,17 +4300,26 @@ public function booking_ride() {
                     $user_details = $this->app_model->get_selected_fields(USERS, array('_id' => new MongoId($user_id)), array('_id'));
                     if ($user_details->num_rows() > 0) {
 
-                        $onride_details = $this->app_model->get_selected_fields(RIDES, array('user.id' => $user_id,'ride_status'=>'Onride'), array('ride_id'));
+                        $onride_details = $this->app_model->get_selected_fields(RIDES, array('user.id' => $user_id), array('ride_id','ride_status'));
 
-                        if($onride_details->num_rows() > 0){
 
-                            $returnArr['status'] = '1';
+                        $onride=0;
+                        foreach($onride_details->result() as $value){
+                          if($value->ride_status=='Arrived' || $value->ride_status=='Confirmed' || $value->ride_status=='Onride'){
 
-                            $returnArr['response'] = array('ride_id' => $onride_details->row()->ride_id, 'message'=>'User is onride'
-                            );
+                            $onride=$value->ride_id;
+                          }
+                        }
+                        if($onride!==0){
+                        $returnArr['status'] = '1';
+                        $returnArr['response'] = array('ride_id' => $onride, 'message' => 'User is onride');
                         }
                         else {
                             $returnArr['response'] = $this->format_string("This user is not onride now", "invalid_user");
+                        }
+                        }
+                        else {
+                        $returnArr['response'] = $this->format_string("Some Parameters are missing", "some_parameters_missing");
                         }
 
 
@@ -4323,9 +4332,7 @@ public function booking_ride() {
                 } else {
                     $returnArr['response'] = $this->format_string("Some Parameters are missing", "some_parameters_missing");
                 }
-            } else {
-                $returnArr['response'] = $this->format_string("Some Parameters are missing", "some_parameters_missing");
-            }
+
         } catch (MongoException $ex) {
             $returnArr['response'] = $this->format_string("Error in connection", "error_in_connection");
         }
